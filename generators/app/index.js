@@ -5,12 +5,10 @@ var yosay = require('yosay');
 var generatorWebappUtils = require('../../util/generator-webapp-utils.js');
 
 module.exports = generators.Base.extend({
+
   constructor: function () {
     generators.Base.apply(this, arguments);
-  }
-});
-
-module.exports = generators.Base.extend({
+  },
 
   promptProjectType: function () {
     var done = this.async();
@@ -25,7 +23,7 @@ module.exports = generators.Base.extend({
       message: 'What type of project will this be ?',
       choices: [
       "Angular Web App",
-      "Module to be included in other Web Apps"
+      "Module to be included in other Angular Web Apps"
       ],
       filter: function (val) {
         var filterMap = {
@@ -36,6 +34,7 @@ module.exports = generators.Base.extend({
       },
       store: true,
     }, function (answers) {
+      this.log(answers);
       this.log(answers.projectType);
       this.projectType = answers.projectType;
       done();
@@ -71,7 +70,7 @@ module.exports = generators.Base.extend({
       store: true,
     }, function (answers) {
       this.log(answers.projectType);
-      this.projectType = answers.projectType;
+      this.projectDependencies = answers.projectDependencies;
       done();
     }.bind(this));
   },
@@ -106,9 +105,7 @@ module.exports = generators.Base.extend({
       done();
     }.bind(this));
   },
-
-  processTemplates: function () {
-
+  scaffoldProjectBase: function () {
     //
     // project setup
     //
@@ -122,12 +119,28 @@ module.exports = generators.Base.extend({
     this.template('karma.conf.js', 'karma.conf.js');
     this.template('editorconfig', '.editorconfig');
 
-    //
-    // angular app setup
-    //
-    this.template('src/index.html', 'src/index.html');
+  },
 
+  scaffoldModule: function () {
+    console.log("project type ",this.projectType);
+    if ( this.projectType === "Webapp" ) { return; }
+    this.template('src/demo/demo.js', 'src/demo/demo.js');
+    this.template('src/module/module.js', 'src/module/module.js');
+    this.template('src/demo/index.html', 'src/index.html');
+
+    this.template('src/demo/demo.controller.js', 'src/demo/demo.controller.js');
+
+    this.template('src/demo/main.html', 'src/demo/main.html');
+    this.template('src/demo/header.html', 'src/demo/header.html');
+    this.template('src/demo/footer.html', 'src/demo/footer.html');
+    this.composeWith('angular-webapp:route', { options: { path: generatorWebappUtils.sanitizePath('src/module/exampleRoute'), name: 'exampleRoute' }});
+  },
+
+  scaffoldApp: function () {
+    console.log("project type ",this.projectType);
+    if ( this.projectType === "Module" ) { return; }
     this.template('src/app/app.js', 'src/app/app.js');
+    this.template('src/index.html', 'src/index.html');
 
     //
     // main route /
@@ -153,6 +166,9 @@ module.exports = generators.Base.extend({
     //
     this.composeWith('angular-webapp:route', { options: { path: generatorWebappUtils.sanitizePath('src/app/exampleRoute'), name: 'exampleRoute' }});
     this.directory('src/tmp', 'src/.tmp');
+  },
+
+  processTemplates: function () {
 
   },
 
