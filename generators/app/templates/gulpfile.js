@@ -15,6 +15,7 @@ var gulp = require('gulp'),
     reload = browserSync.reload,
     historyApiFallback = require('connect-history-api-fallback'),
     ngdocs = require('gulp-ngdocs'),
+    jade = require('gulp-jade'),
     path = require('path');
 
 // Script Variables
@@ -22,7 +23,7 @@ var eventType = 'added'; // defaults to this so that it triggers the index task 
 
 // Tasks
 gulp.task('default', ['deploy'], function() {
- var watcher = gulp.watch(['!src/index.html', '!src/ng-docs/**/*', 'src/app/**/*', 'src/demo/**/*', 'src/module/**/*'], function (e) {
+ var watcher = gulp.watch(['!src/index.html', 'src/app/**/*', 'src/demo/**/*', 'src/module/**/*', 'src/.tmp/**/*'], function (e) {
   eventType = e.type;
   gulp.start('deploy');
  });
@@ -33,10 +34,10 @@ gulp.task('deploy', ['dist'], function() {
   console.log("deploying TODO: ");
 });
 
-gulp.task('index', function () {
+gulp.task('index', ['html-templates'], function () {
   if ( eventType !== 'added' ) { return true; }
   var target = gulp.src('./src/index.html');
-  var sources = gulp.src(['./src/app/app.js', './src/module/module.js', './src/demo/demo.js', '!./src/ng-docs/**/*', '!./src/bower_components/**/*', '!./src/**/*.spec.js', './src/**/*.js', './src/**/*.css'], {read: false});
+  var sources = gulp.src(['./src/app/app.js', './src/module/module.js', './src/demo/demo.js', '!./src/bower_components/**/*', '!./src/**/*.spec.js', './src/**/*.js', './src/**/*.css', 'src/.tmp/**/*'], {read: false});
   target.pipe(inject(sources, {ignorePath: 'src', addRootSlash: false }))
   .pipe(inject(gulp.src(mainBowerFiles({ filter: /^((?!(angular-mocks.js)).)*$/ }), {read: false}), {ignorePath: 'src', addRootSlash: false, name: 'bower'}))
   .pipe(gulp.dest('./src'));
@@ -44,7 +45,7 @@ gulp.task('index', function () {
 });
 
 gulp.task('karma-inject', function () {
-  var sources = gulp.src(['./src/app/app.js', '!./src/bower_components/**/*', './src/**/*.js']);
+  var sources = gulp.src(['./src/app/app.js', '!./src/bower_components/**/*', './src/**/*.js', 'src/.tmp/**/*']);
 
   return gulp.src('./karma.conf.js')
     .pipe(inject(gulp.src(mainBowerFiles({ filter: /.js$/ })),{starttag: '// gulp-inject:mainBowerFiles', endtag: '// gulp-inject:mainBowerFiles:end', addRootSlash: false,
@@ -55,7 +56,7 @@ gulp.task('karma-inject', function () {
 });
 
 gulp.task('dist', ['index','html-templates'], function(done) {
-  return gulp.src(['src/app/app.js', '!src/**/*.spec.js', 'src/**/*.js'])
+  return gulp.src(['!src/bower_components/**/*', 'src/app/app.js', 'src/module/module.js', '!src/**/*.spec.js','!src/demo/**/*.js', 'src/**/*.js', 'src/.tmp/*.js', 'src/module/**/*.js'])
     .pipe(concat('<%= config.get("name") %>.js'))
     .pipe(gulp.dest('dist'))
     .pipe(uglify())
@@ -64,13 +65,23 @@ gulp.task('dist', ['index','html-templates'], function(done) {
     .pipe(gulp.dest('dist'));
 });
 
-gulp.task('html-templates', ['sass'], function() {
+gulp.task('html-templates', ['sass', 'jade-templates'], function() {
    return gulp.src([ 'src/**/*.html', '!src/index.html' ])
      .pipe(ngCache({
-        filename : 'src/.tmp/templates.js',
+        filename : '.tmp/templates.js',
         module : '<%= config.get("name") %>'
       }))
      .pipe(gulp.dest('src'));
+});
+
+gulp.task('jade-templates', function() {
+  return gulp.src('src/**/*.jade')
+    .pipe(jade())
+    .pipe(ngCache({
+      filename: '.tmp/jemplates.js',
+      module: '<%= config.get("name") %>'
+    }))
+    .pipe(gulp.dest('src'));
 });
 
 gulp.task('serve', ['deploy'], function() {
@@ -87,6 +98,7 @@ gulp.task('serve', ['deploy'], function() {
   });
 
   gulp.watch(['./**/*.html', './**/*.css', './**/*.js'], {cwd: 'src'}, reload);
+  gulp.start('default');
 });
 
 // ngDocs related section

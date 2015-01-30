@@ -20,7 +20,8 @@ module.exports = function(config) {
 			'src/module/**/*.js',
 			'src/app/**/*.js',
 			'src/app/app.js',
-			'src/.tmp/templates.js'
+			'src/.tmp/templates.js',
+			'src/.tmp/jemplates.js'
     ],
 
     // list of files to exclude
