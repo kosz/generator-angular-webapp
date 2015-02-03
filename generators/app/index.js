@@ -5,12 +5,10 @@ var yosay = require('yosay');
 var generatorWebappUtils = require('../../util/generator-webapp-utils.js');
 
 module.exports = generators.Base.extend({
+
   constructor: function () {
     generators.Base.apply(this, arguments);
-  }
-});
-
-module.exports = generators.Base.extend({
+  },
 
   promptProjectType: function () {
     var done = this.async();
@@ -25,7 +23,7 @@ module.exports = generators.Base.extend({
       message: 'What type of project will this be ?',
       choices: [
       "Angular Web App",
-      "Module to be included in other Web Apps"
+      "Module to be included in other Angular Web Apps"
       ],
       filter: function (val) {
         var filterMap = {
@@ -36,6 +34,7 @@ module.exports = generators.Base.extend({
       },
       store: true,
     }, function (answers) {
+      this.log(answers);
       this.log(answers.projectType);
       this.projectType = answers.projectType;
       done();
@@ -71,7 +70,7 @@ module.exports = generators.Base.extend({
       store: true,
     }, function (answers) {
       this.log(answers.projectType);
-      this.projectType = answers.projectType;
+      this.projectDependencies = answers.projectDependencies;
       done();
     }.bind(this));
   },
@@ -106,9 +105,7 @@ module.exports = generators.Base.extend({
       done();
     }.bind(this));
   },
-
-  processTemplates: function () {
-
+  scaffoldProjectBase: function () {
     //
     // project setup
     //
@@ -122,12 +119,26 @@ module.exports = generators.Base.extend({
     this.template('karma.conf.js', 'karma.conf.js');
     this.template('editorconfig', '.editorconfig');
 
-    //
-    // angular app setup
-    //
-    this.template('src/index.html', 'src/index.html');
+  },
 
+  scaffoldModule: function () {
+    if ( this.projectType === "Webapp" ) { return; }
+    this.template('src/demo/demo.js', 'src/demo/demo.js');
+    this.template('src/module/module.js', 'src/module/module.js');
+    this.template('src/demo/index.html', 'src/index.html');
+
+    this.template('src/demo/demo.controller.js', 'src/demo/demo.controller.js');
+
+    this.template('src/demo/main.html', 'src/demo/main.html');
+    this.template('src/demo/header.html', 'src/demo/header.html');
+    this.template('src/demo/footer.html', 'src/demo/footer.html');
+    this.composeWith('angular-webapp:route', { options: { path: generatorWebappUtils.sanitizePath('src/module/exampleRoute'), name: 'exampleRoute' }});
+  },
+
+  scaffoldApp: function () {
+    if ( this.projectType === "Module" ) { return; }
     this.template('src/app/app.js', 'src/app/app.js');
+    this.template('src/index.html', 'src/index.html');
 
     //
     // main route /
@@ -153,32 +164,22 @@ module.exports = generators.Base.extend({
     //
     this.composeWith('angular-webapp:route', { options: { path: generatorWebappUtils.sanitizePath('src/app/exampleRoute'), name: 'exampleRoute' }});
     this.directory('src/tmp', 'src/.tmp');
-
   },
 
   install: function () {
     var name = this.name;
     this.installDependencies({
       callback: function () {
-        this.spawnCommand('gulp', ['index','ngdocs']).on('close', function (code) {
-          console.log(chalk.bold.green('Finished setting up ' + name + ' run gulp to get started\n'));
+        this.spawnCommand('gulp', ['karma-inject','index','ngdocs-build']).on('close', function (code) {
+          console.log(chalk.bold.green('\nFinished setting up ' + name + ' run gulp to get started\n'));
           console.log(chalk.bold.yellow('docs :') + chalk.red(' https://github.com/kosz/generator-angular-webapp') + '\n' );
 
-          console.log(chalk.bold.yellow('gulp :'));
-          console.log(chalk.yellow(' gulp') + chalk.green(' - default task, watches and runs : ' +
-              chalk.yellow('serve') + ', ' +
-              chalk.yellow('test') + ', ' +
-              chalk.yellow('dist') + ', ' +
-              chalk.yellow('deploy')
-          ));
-          console.log(chalk.yellow(' gulp deploy') + chalk.green(' - deploys the dist code on a specified location'));
-          console.log(chalk.yellow(' gulp serve') + chalk.green(' - opens a live reload node server'));
-          console.log(chalk.yellow(' gulp dist') + chalk.green(' - prepares the dist directory\n'));
+          console.log(chalk.bold.yellow('quick start :'));
 
-          console.log(chalk.bold.yellow('testing :'));
-
-          console.log(chalk.yellow(' npm test/karma start') + chalk.green(' - NOT NEEDED: tests will be ran by the gulp watcher'));
-          console.log(chalk.yellow(' protractor') + chalk.green(' - todo') + '\n');
+          console.log(chalk.yellow(' gulp serve') + chalk.green(' - opens up a live reload server, and runs the ') + chalk.cyan('watchers'));
+          console.log(chalk.yellow(' gulp') + chalk.green(' - runs the ') + chalk.cyan('watchers') + chalk.green(' but does not open a server'));
+          console.log(chalk.yellow(' npm test') + chalk.green(' - runs the jasmine spec suite') + chalk.gray(' alternate command: karma start karma.conf.js'));
+          console.log(chalk.yellow(' gulp ngdocs-serve') + chalk.green(' - compiles ngDocs from your comments, and opens up a server, serving the documentation page\n'));
 
         });
       }.bind(this)
